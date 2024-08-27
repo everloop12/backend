@@ -1,0 +1,236 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider        = "prisma-client-js"
+  previewFeatures = ["fieldReference"]
+}
+
+datasource db {
+  provider = "mongodb"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  STUDENT
+  ADMIN
+}
+
+model User {
+  id          String  @id @default(auto()) @map("_id") @db.ObjectId
+  email       String  @unique
+  role        Role    @default(STUDENT)
+  country     String?
+  university  String?
+  name        String?
+  lastName    String? @default("")
+  displayName String? @unique
+
+  streak Int? @default(0)
+
+  referral_code String? @unique()
+
+  referredById     String? @db.ObjectId
+  referredBy       User?   @relation("ReferredUsers", fields: [referredById], references: [id], onDelete: NoAction, onUpdate: NoAction)
+  firstMilesStone  Boolean @default(false)
+  secondMilesStone Boolean @default(false)
+  thirdMilesStone  Boolean @default(false)
+
+  referredUsers User[] @relation("ReferredUsers")
+  xp            Int    @default(0)
+
+  lastPaymentAt            DateTime?
+  lastPackageExpiry        DateTime?
+  lastPackageTransactionId String?
+
+  createdAt DateTime? @default(now())
+  updatedAt DateTime? @updatedAt
+
+  anon  Boolean @default(false)
+  focus Boolean @default(false)
+
+  answers      Answer[]
+  quests       Quest[]
+  transactions Transaction[]
+  Comments     Comments[]
+  Reports      Reports[]
+  Statistics   Statistics[]
+}
+
+enum PaymentGatewayEnum {
+  PAYMOB
+  PAYPAL
+}
+
+model Transaction {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  userEmail String
+  user      User   @relation(fields: [userEmail], references: [email])
+
+  amount         Float?
+  paymentGateway PaymentGatewayEnum
+
+  currency      String?
+  duration      Int?
+  transactionId String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Quest {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  uid  String? @db.ObjectId
+  user User?   @relation(fields: [uid], references: [id], onDelete: Cascade)
+
+  tag             QuestTypeEnum
+  frequency       QuestFrequencyEnum @default(DAILY)
+  rotation        Int?
+  ref             String?
+  currentProgress Int                @default(0)
+  goal            Int                @default(0)
+  reward          Int                @default(10)
+  cleared         Boolean            @default(false)
+}
+
+model Question {
+  id       String           @id @default(auto()) @map("_id") @db.ObjectId
+  question String?
+  choices  QuestionChoice[]
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  tags       Tag[]    @relation(fields: [tagIds], references: [id])
+  tagIds     String[] @db.ObjectId
+  references String[] @default([])
+
+  categoryIds String[]   @db.ObjectId
+  categories  Category[] @relation(fields: [categoryIds], references: [id])
+
+  answers  Answer[]
+  Comments Comments[]
+  Reports  Reports[]
+}
+
+model Comments {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  questionId String   @db.ObjectId
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  text       String
+  rating     Int
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Reports {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  questionId String   @db.ObjectId
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+  reason     String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  @@unique([questionId, userId], name: "ReportIdentifier")
+}
+
+type QuestionChoice {
+  text      String
+  isCorrect Boolean
+  index     Int
+}
+
+model Category {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  name String @unique
+
+  questionIDs String[]   @db.ObjectId
+  questions   Question[] @relation(fields: [questionIDs], references: [id])
+
+  averageRating Float @default(0)
+
+  createdAt  DateTime     @default(now())
+  updatedAt  DateTime     @updatedAt
+  Statistics Statistics[]
+}
+
+model Statistics {
+  id     String @id @default(auto()) @map("_id") @db.ObjectId
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  categoryId String   @db.ObjectId
+  category   Category @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  questionCount       Int   @default(0)
+  activeQuestionCount Int   @default(0)
+  performance         Float @default(0)
+  activePerformance   Float @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Tag {
+  id   String @id @default(auto()) @map("_id") @db.ObjectId
+  name String @unique
+
+  questionIDs String[]   @db.ObjectId
+  questions   Question[] @relation(fields: [questionIDs], references: [id])
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model Answer {
+  id String @id @default(auto()) @map("_id") @db.ObjectId
+
+  userId String @db.ObjectId
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  questionId String   @db.ObjectId
+  question   Question @relation(fields: [questionId], references: [id], onDelete: Cascade)
+
+  answer  AnswerEnum
+  index   Int
+  deleted Boolean    @default(false)
+
+  isCorrect Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // @@unique([questionId, userId], name: "AnswerIdentifier")
+}
+
+enum AnswerEnum {
+  A
+  B
+  C
+  D
+  E
+}
+
+enum QuestTypeEnum {
+  QUESTION
+  EXAM
+  LOGIN
+  REVISION
+}
+
+enum QuestFrequencyEnum {
+  DAILY
+  WEEKLY
+  MONTHLY
+  BADGE
+}
