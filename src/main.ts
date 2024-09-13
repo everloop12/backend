@@ -47,10 +47,10 @@ async function bootstrap() {
   });
 
 
+  const port = process.env.PORT || 3500;
+  await app.listen(port);
 
-  await app.listen(process.env.PORT || 3500);
-  // app.get(QuestSevice).updateQuests()
-  // app.get(StatsSevice).calculateStats();
   console.log(`Application is running on: ${await app.getUrl()}`);
 }
+
 bootstrap();
