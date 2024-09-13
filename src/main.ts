@@ -3,19 +3,21 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import rawBodyMiddleware from './common/middlewares/rawBody.middleware';
-import { StatsSevice } from './stats/stats.service';
-import { QuestSevice } from './quests/quest.service'
-import { PrismaModule } from './prisma/prisma.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
-  const port = process.env.PORT || 3000;  // Fall back to port 3000 if not provided
+  const port = process.env.PORT || 3000;  // Use PORT provided by Render or fallback to 3000 for local
 
+  // Global prefix for routes
   app.setGlobalPrefix('/v1');
+
+  // Enable Cross-Origin Resource Sharing (CORS)
   app.enableCors();
 
+  // Middleware to handle raw body parsing
   app.use(rawBodyMiddleware());
 
+  // Global validation pipes
   app.useGlobalPipes(
     new ValidationPipe({
       whitelist: true,
@@ -27,11 +29,10 @@ async function bootstrap() {
     }),
   );
 
+  // Swagger configuration
   const config = new DocumentBuilder()
-    .setTitle('Lohanza API Doc')
-    .setDescription(
-      'The official API documentation for the Lohanza API. This API is used to manage the Lohanza platform. Built with love by Team Lohanza ❤',
-    )
+    .setTitle('Lohanza API Documentation')
+    .setDescription('Official API documentation for the Lohanza platform, built by Team Lohanza ❤️')
     .setVersion('1.0')
     .addBearerAuth()
     .addSecurityRequirements('bearer')
@@ -47,10 +48,13 @@ async function bootstrap() {
     },
   });
 
-
-  await app.listen(port);
-
-  console.log(`Application is running on: ${await app.getUrl()}`);
+  try {
+    await app.listen(port);  // Listen on the port
+    console.log(`Application is running on: ${await app.getUrl()}`);
+  } catch (error) {
+    console.error(`Error starting the server: ${error.message}`);
+    process.exit(1);  // Exit the process if an error occurs during startup
+  }
 }
 
 bootstrap();
