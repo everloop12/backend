@@ -8,7 +8,8 @@
     "allowSyntheticDefaultImports": true,
     "target": "ES2021",
     "sourceMap": true,
-    "outDir": "./dist",
+    "outDir": "./dist",             // Output directory
+    "rootDir": "./src",             // Root directory for your source files
     "baseUrl": "./",
     "incremental": true,
     "skipLibCheck": true,
@@ -17,6 +18,8 @@
     "strictBindCallApply": false,
     "forceConsistentCasingInFileNames": false,
     "noFallthroughCasesInSwitch": false,
-    "resolveJsonModule": true,
-  }
+    "resolveJsonModule": true
+  },
+  "include": ["src/**/*"],           // Include all files in the `src` folder
+  "exclude": ["node_modules"]        // Exclude node_modules
 }
