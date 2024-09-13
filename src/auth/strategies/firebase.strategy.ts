@@ -4,31 +4,7 @@ import { Request } from 'express';
 import * as firebase from 'firebase-admin';
 import { DecodedIdToken } from 'firebase-admin/auth';
 import { Strategy, ExtractJwt } from 'passport-firebase-jwt';
-import * as serviceAccountData from '../firebaseServiceAccount.json';
 import { Reflector } from '@nestjs/core';
-
-const serviceAccount =
-  process.env.NODE_ENV === 'production'
-    ? serviceAccountData['prod']
-    : serviceAccountData['dev'];
-
-const fbPrivateKey =
-  process.env.NODE_ENV === 'production'
-    ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/gm, '\n')
-    : serviceAccount['private_key'];
-
-const firebase_params = {
-  type: serviceAccount.type,
-  project_id: serviceAccount.project_id,
-  privateKeyId: serviceAccount.private_key_id,
-  privateKey: fbPrivateKey,
-  clientEmail: serviceAccount.client_email,
-  clientId: serviceAccount.client_id,
-  authUri: serviceAccount.auth_uri,
-  tokenUri: serviceAccount.token_uri,
-  authProviderX509CertUrl: serviceAccount.auth_provider_x509_cert_url,
-  clientC509CertUrl: serviceAccount.client_x509_cert_url,
-};
 
 @Injectable()
 export class FirebaseAuthStrategy extends PassportStrategy(
@@ -36,11 +12,32 @@ export class FirebaseAuthStrategy extends PassportStrategy(
   'firebase-auth',
 ) {
   private defaultApp: firebase.app.App;
+
   constructor(private readonly reflector: Reflector) {
     super({
       jwtFromRequest: ExtractJwt.fromAuthHeaderAsBearerToken(),
       passReqToCallback: true,
     });
+
+    // Define Firebase parameters, ensure private key handling
+    const fbPrivateKey = process.env.FIREBASE_PRIVATE_KEY
+      ? process.env.FIREBASE_PRIVATE_KEY.replace(/\\n/g, '\n')  // Replace \\n with actual newline
+      : null;
+
+    const firebase_params = {
+      type: process.env.FIREBASE_TYPE,
+      projectId: process.env.FIREBASE_PROJECT_ID,
+      privateKeyId: process.env.FIREBASE_PRIVATE_KEY_ID,
+      privateKey: fbPrivateKey,
+      clientEmail: process.env.FIREBASE_CLIENT_EMAIL,
+      clientId: process.env.FIREBASE_CLIENT_ID,
+      authUri: process.env.FIREBASE_AUTH_URI,
+      tokenUri: process.env.FIREBASE_TOKEN_URI,
+      authProviderX509CertUrl: process.env.FIREBASE_AUTH_PROVIDER_X509_CERT_URL,
+      clientX509CertUrl: process.env.FIREBASE_CLIENT_X509_CERT_URL,
+    };
+
+    // Initialize Firebase Admin SDK
     this.defaultApp = firebase.initializeApp({
       credential: firebase.credential.cert(firebase_params),
     });
