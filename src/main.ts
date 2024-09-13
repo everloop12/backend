@@ -9,6 +9,7 @@ import { PrismaModule } from './prisma/prisma.module';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
+  const port = process.env.PORT || 3000;  // Fall back to port 3000 if not provided
 
   app.setGlobalPrefix('/v1');
   app.enableCors();
@@ -47,7 +48,6 @@ async function bootstrap() {
   });
 
 
-  const port = process.env.PORT || 3500;
   await app.listen(port);
 
   console.log(`Application is running on: ${await app.getUrl()}`);
