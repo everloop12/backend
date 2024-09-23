@@ -3,9 +3,8 @@ import { AppModule } from './app.module';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { ValidationPipe } from '@nestjs/common';
 import rawBodyMiddleware from './common/middlewares/rawBody.middleware';
-import { StatsSevice } from './stats/stats.service';
-import { QuestSevice } from './quests/quest.service'
-import { PrismaModule } from './prisma/prisma.module';
+import * as fs from 'fs';
+import * as path from 'path';
 
 async function bootstrap() {
   const app = await NestFactory.create(AppModule);
@@ -22,9 +21,19 @@ async function bootstrap() {
       transform: true,
       transformOptions: {
         enableImplicitConversion: true,
-      }
+      },
     }),
   );
+
+  // Serve loaderio verification file
+  app.getHttpAdapter().get('/loaderio-4f6c5f433d231fdb509719e6c3ae048c.txt', (req, res) => {
+    const filePath = path.join(__dirname, '..', 'loaderio-4f6c5f433d231fdb509719e6c3ae048c.txt');
+    if (fs.existsSync(filePath)) {
+      res.sendFile(filePath);
+    } else {
+      res.status(404).send('File not found');
+    }
+  });
 
   const config = new DocumentBuilder()
     .setTitle('Lohanza API Doc')
@@ -46,11 +55,7 @@ async function bootstrap() {
     },
   });
 
-
-
   await app.listen(process.env.PORT || 3500);
-  // app.get(QuestSevice).updateQuests()
-  // app.get(StatsSevice).calculateStats();
   console.log(`Application is running on: ${await app.getUrl()}`);
 }
 bootstrap();
