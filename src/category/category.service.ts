@@ -82,26 +82,17 @@ export class CategoryService {
 
   async getAnswersByCategories(uid: string) {
     const date = await this.prisma.user.findFirstOrThrow({
-      where: { id: uid }, select: {
-        lastPackageExpiry: true
-      }
-    })
-
+      where: { id: uid },
+      select: { lastPackageExpiry: true }
+    });
+  
     let premium = false;
-    if (!date.lastPackageExpiry)
-      premium = false
-    else
-      premium = new Date(Date.now()).getTime() < new Date((date.lastPackageExpiry)).getTime()
+    if (date.lastPackageExpiry) {
+      premium = new Date(Date.now()).getTime() < new Date(date.lastPackageExpiry).getTime();
+    }
+  
+    // Fetch categories and their answers without filtering for "trial"
     return await this.prisma.category.findMany({
-      where: {
-        name: premium ? {
-          not: {
-            contains: "trial"
-          }
-        } : {
-          contains: 'trial'
-        }
-      },
       select: {
         id: true,
         name: true,
@@ -112,7 +103,7 @@ export class CategoryService {
             answers: {
               where: {
                 userId: uid,
-                deleted: false
+                deleted: false,
               },
               select: {
                 isCorrect: true,
@@ -128,6 +119,7 @@ export class CategoryService {
       }
     });
   }
+  
 
   async getUserAnalytics(uid: string) {
     return await this.prisma.category.findMany({

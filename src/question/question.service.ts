@@ -305,57 +305,57 @@ export class QuestionService {
   }
 
   async getUserData(uid: string) {
-    const date = await this.prisma.user.findFirstOrThrow({ where: { id: uid } });
-    let premium = false;
-  
-    if (date.lastPackageExpiry) {
-      premium = new Date(Date.now()).getTime() < new Date(date.lastPackageExpiry).getTime();
-    }
-  
-    // Fetch statistics without filtering for trial questions
-    const statistics = await this.prisma.question.findMany({
-      select: {
-        id: true,
-        answers: {
-          where: {
-            deleted: false
-          },
-          select: {
-            user: {
-              select: {
-                country: true,
-                university: true,
-              }
+  const date = await this.prisma.user.findFirstOrThrow({ where: { id: uid } });
+  let premium = false;
+
+  if (date.lastPackageExpiry) {
+    premium = new Date(Date.now()).getTime() < new Date(date.lastPackageExpiry).getTime();
+  }
+
+  // Fetch statistics without filtering for trial questions
+  const statistics = await this.prisma.question.findMany({
+    select: {
+      id: true,
+      answers: {
+        where: {
+          deleted: false
+        },
+        select: {
+          user: {
+            select: {
+              country: true,
+              university: true,
             }
           }
         }
-      },
-    });
-  
-    // Fetch questions without filtering for trial categories
-    const questions = await this.prisma.question.findMany({
-      include: {
-        answers: {
-          where: {
-            userId: uid,
-            deleted: false,
-          }
+      }
+    },
+  });
+
+  // Fetch questions without filtering for trial categories
+  const questions = await this.prisma.question.findMany({
+    include: {
+      answers: {
+        where: {
+          userId: uid,
+          deleted: false,
         }
       }
-    });
-  
-    // Fetch all tags and categories without filtering for "trial"
-    const tags = await this.prisma.tag.findMany({});
-    const categories = await this.prisma.category.findMany({});
-  
-    return {
-      questions,
-      tags,
-      categories,
-      stats: statistics,
-    };
-  }
-  
+    }
+  });
+
+  // Fetch all tags and categories without filtering for "trial"
+  const tags = await this.prisma.tag.findMany({});
+  const categories = await this.prisma.category.findMany({});
+
+  return {
+    questions,
+    tags,
+    categories,
+    stats: statistics,
+  };
+}
+
 
   private shuffleArray(array = []) {
     return array;
