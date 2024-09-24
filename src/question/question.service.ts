@@ -305,65 +305,35 @@ export class QuestionService {
   }
 
   async getUserData(uid: string) {
-
-    const date = await this.prisma.user.findFirstOrThrow({ where: { id: uid } })
+    const date = await this.prisma.user.findFirstOrThrow({ where: { id: uid } });
     let premium = false;
-
-    if (!date.lastPackageExpiry)
-      premium = false
-    else
-      premium = new Date(Date.now()).getTime() < new Date((date.lastPackageExpiry)).getTime()
-
-
+  
+    if (date.lastPackageExpiry) {
+      premium = new Date(Date.now()).getTime() < new Date(date.lastPackageExpiry).getTime();
+    }
+  
+    // Fetch statistics without filtering for trial questions
     const statistics = await this.prisma.question.findMany({
       select: {
         id: true,
         answers: {
           where: {
-            deleted: false,
-            question: {
-              categories: premium ? {
-                none: {
-                  name: {
-                    contains: "trial"
-                  }
-                }
-              } : {
-                some: {
-                  name: {
-                    contains: "trial"
-                  }
-                }
-              }
-            }
+            deleted: false
           },
           select: {
             user: {
               select: {
                 country: true,
-                university: true
+                university: true,
               }
             }
           }
         }
       },
-    })
+    });
+  
+    // Fetch questions without filtering for trial categories
     const questions = await this.prisma.question.findMany({
-      where: {
-        categories: premium ? {
-          none: {
-            name: {
-              contains: "trial"
-            }
-          }
-        } : {
-          some: {
-            name: {
-              contains: "trial"
-            }
-          }
-        }
-      },
       include: {
         answers: {
           where: {
@@ -372,26 +342,20 @@ export class QuestionService {
           }
         }
       }
-    })
-    const tags = await this.prisma.tag.findMany({})
-    const categories = await this.prisma.category.findMany({
-      where: {
-        name: premium ? {
-          not: {
-            contains: "trial"
-          }
-        } : {
-          contains: "trial"
-        }
-      }
-    })
+    });
+  
+    // Fetch all tags and categories without filtering for "trial"
+    const tags = await this.prisma.tag.findMany({});
+    const categories = await this.prisma.category.findMany({});
+  
     return {
       questions,
       tags,
       categories,
-      stats: statistics
-    }
+      stats: statistics,
+    };
   }
+  
 
   private shuffleArray(array = []) {
     return array;
