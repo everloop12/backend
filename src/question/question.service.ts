@@ -83,150 +83,104 @@ export class QuestionService {
   async deleteAll() {
     return this.prisma.question.deleteMany()
   }
-
-  async getQuestionsByMultCategory(paginationDto: PaginationQueryDto, uid: string, categories: string[], tags: string[], revision?: boolean, history?: boolean, pageNumber?: number) {
+  async getQuestionsByMultCategory(
+    paginationDto: PaginationQueryDto,
+    uid: string,
+    categories: string[],
+    tags: string[],
+    revision?: boolean,
+    history?: boolean,
+    pageNumber?: number
+  ) {
     let questions: any;
-    const date = await this.prisma.user.findFirstOrThrow({ where: { id: uid } })
-    let premium = false;
-
-    if (!date.lastPackageExpiry)
-      premium = false
-    else
-      premium = new Date(Date.now()).getTime() < new Date((date.lastPackageExpiry)).getTime()
-
-
-    if (categories.length > 0 || tags.length > 0)
-      questions = await this.prisma.question.findMany(
-        {
-          where: {
-            categoryIds: categories.length === 0 ? undefined : {
-              hasSome: categories
+  
+    // Fetch the user's premium status
+    const date = await this.prisma.user.findFirstOrThrow({ where: { id: uid } });
+    const premium = date.lastPackageExpiry
+      ? new Date(Date.now()).getTime() < new Date(date.lastPackageExpiry).getTime()
+      : false;
+  
+    // Fetch questions without filtering based on trial status
+    if (categories.length > 0 || tags.length > 0) {
+      questions = await this.prisma.question.findMany({
+        where: {
+          categoryIds: categories.length === 0 ? undefined : { hasSome: categories },
+          tagIds: tags.length === 0 ? undefined : { hasSome: tags },
+          answers: !(revision || history)
+            ? { none: { userId: uid, deleted: false } }
+            : { some: { userId: uid, deleted: history ? undefined : false, isCorrect: history ? undefined : false } },
+        },
+        include: revision
+          ? undefined
+          : {
+              answers: {
+                where: {
+                  userId: uid,
+                  deleted: false,
+                },
+              },
+              Comments: true,
+              Reports: true,
+              _count: {},
             },
-            categories: premium ? {
-              none: {
-                name: {
-                  contains: "trial"
-                }
-              }
-            } : {
-              some: {
-                name: {
-                  contains: "trial"
-                }
-              }
+        take: 30,
+        skip: pageNumber * 30,
+      });
+    } else {
+      questions = await this.prisma.question.findMany({
+        where: {
+          answers: !(revision || history)
+            ? { none: { userId: uid, deleted: false } }
+            : { some: { userId: uid, deleted: history ? undefined : false, isCorrect: history ? undefined : false } },
+        },
+        include: revision
+          ? undefined
+          : {
+              answers: {
+                where: {
+                  userId: uid,
+                  deleted: false,
+                },
+              },
+              Comments: true,
+              Reports: true,
             },
-            tagIds: tags.length === 0 ? undefined : {
-              hasSome: tags
-            },
-            answers: !(revision || history) ? {
-              none: {
-                userId: uid,
-                deleted: false
-              }
-            } : {
-              some: {
-                userId: uid,
-                deleted: history ? undefined : false,
-                isCorrect: history ? undefined : false
-              }
-            }
-          },
-          include: revision ? undefined : {
-            answers: {
-              where: {
-                userId: uid,
-                deleted: false,
-              }
-            },
-            Comments: true,
-            Reports: true,
-            _count: {
-
-            }
-          },
-          take: 30,
-          skip: pageNumber * 30,
-        })
-    else
-      questions = await this.prisma.question.findMany(
-        {
-          where: {
-            categories: premium ? {
-              none: {
-                name: {
-                  contains: "trial"
-                }
-              }
-            } : {
-              some: {
-                name: {
-                  contains: "trial"
-                }
-              }
-            },
-            answers: !(revision || history) ? {
-              none: {
-                userId: uid,
-                deleted: false
-              }
-            } : {
-              some: {
-                userId: uid,
-                deleted: history ? undefined : false,
-                isCorrect: history ? undefined : false
-              }
-            }
-          },
-          include: revision ? undefined : {
-            answers: {
-              where: {
-                userId: uid,
-                deleted: false,
-              }
-            },
-            Comments: true,
-            Reports: true,
-          },
-          take: 30,
-          skip: pageNumber * 30,
-        })
-
+        take: 30,
+        skip: pageNumber * 30,
+      });
+    }
+  
+    // Fetch statistics for the questions
     const statistics = await this.prisma.question.findMany({
-      where:{
-        id:{
-          in: questions.map((q) => q.id)
-        }
+      where: {
+        id: {
+          in: questions.map((q) => q.id),
+        },
       },
       select: {
         id: true,
         answers: {
           where: {
-            deleted: false
+            deleted: false,
           },
           select: {
             user: {
               select: {
                 country: true,
-                university: true
-              }
-            }
-          }
-          // include: {
-          //   user: {
-          //     select: {
-          //       country: true,
-          //       university: true
-          //     }
-          //   }
-          // }
-        }
+                university: true,
+              },
+            },
+          },
+        },
       },
-    })
-
-
-    this.questService.progressQuests("EXAM", uid)
-    return { questions: questions, stats: statistics };
+    });
+  
+    // Trigger quest progress update
+    this.questService.progressQuests("EXAM", uid);
+  
+    return { questions, stats: statistics };
   }
+  
 
   async getSaidQuestion(id: string) {
     if (id == 'none')
