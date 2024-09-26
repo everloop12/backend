@@ -120,6 +120,7 @@ export class CategoryService {
     });
   }
   
+  //lazy comment for git redeploy 
 
   async getUserAnalytics(uid: string) {
     return await this.prisma.category.findMany({
